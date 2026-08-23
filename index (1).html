@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Classroom Timer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --ink:#0B0E14;
+  --idle:#101B33;
+  --font-display:'Archivo Black', system-ui, sans-serif;
+  --font-body:'Inter', system-ui, sans-serif;
+  --bg: var(--idle);
+}
+
+*{box-sizing:border-box;}
+
+html,body{
+  margin:0; padding:0; height:100%; width:100%;
+  overflow:hidden;
+  font-family:var(--font-body);
+  -webkit-user-select:none; user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+body{ background:var(--bg); transition:background 1.1s ease; }
+
+#app{
+  position:relative; height:100%; width:100%;
+  display:flex; flex-direction:column; color:#fff;
+}
+
+#app::before{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(0,0,0,.16) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 60%, rgba(0,0,0,.38) 100%);
+  pointer-events:none; z-index:1;
+}
+
+#topbar{
+  position:relative; z-index:2;
+  display:flex; justify-content:flex-end; align-items:flex-start;
+  padding:clamp(16px,2.5vw,34px) clamp(20px,3vw,40px) 0;
+}
+#topRight{ display:flex; align-items:center; gap:10px; }
+#clock{
+  font-family:var(--font-body); font-weight:700;
+  font-size:clamp(13px,1.5vw,20px); opacity:.85;
+  margin-right:6px; letter-spacing:.02em;
+}
+.icon-btn{
+  width:clamp(38px,4vw,50px); height:clamp(38px,4vw,50px);
+  border-radius:50%; border:1.5px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.12); color:#fff;
+  font-size:clamp(16px,1.9vw,22px);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; backdrop-filter:blur(6px);
+  transition:background .2s, transform .15s;
+}
+.icon-btn:active{transform:scale(.92);}
+.icon-btn:hover{background:rgba(255,255,255,.22);}
+
+#testBadge{
+  display:none; background:#E24A4A; color:#fff; font-weight:800;
+  font-size:11px; letter-spacing:.06em; padding:5px 10px;
+  border-radius:20px; margin-right:2px; cursor:pointer;
+}
+#testBadge.show{display:inline-block;}
+
+#mainWrap{
+  flex:1; position:relative; z-index:2;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; padding:0 clamp(16px,4vw,40px); gap:clamp(8px,1.6vh,18px);
+}
+
+#center{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:clamp(6px,1vw,14px); }
+#segEmoji{ font-size:clamp(56px,11vw,130px); line-height:1; filter:drop-shadow(0 6px 18px rgba(0,0,0,.25)); }
+#segName{
+  font-family:var(--font-body); font-weight:800;
+  font-size:clamp(20px,3.4vw,42px); text-transform:uppercase;
+  letter-spacing:.06em; opacity:.95;
+}
+#countdown{
+  font-family:var(--font-display);
+  font-size:clamp(72px,15vw,190px); line-height:1; letter-spacing:.01em;
+  text-shadow:0 8px 30px rgba(0,0,0,.28);
+  font-variant-numeric:tabular-nums;
+}
+#subline{ font-family:var(--font-body); font-weight:600; font-size:clamp(13px,1.5vw,18px); opacity:.8; letter-spacing:.03em; }
+#periodLabel{
+  font-family:var(--font-body); font-weight:800; letter-spacing:.14em;
+  text-transform:uppercase; font-size:clamp(14px,1.6vw,22px); opacity:.88;
+}
+
+#diceArea{
+  position:relative; width:100%; display:flex; align-items:center; justify-content:center;
+  min-height:0; height:0; transition:height .15s; overflow:visible;
+}
+#diceArea.active{ height:clamp(90px,16vh,190px); }
+#diceOverlay{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  pointer-events:none; transform-origin:center;
+}
+#diceFaces{ display:flex; gap:clamp(8px,1.6vw,18px); }
+.die-face{
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.22);
+  border:3px solid rgba(255,255,255,.65);
+  border-radius:18%;
+  font-family:var(--font-body); font-weight:900;
+  color:#fff;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+#diceTotal{ font-family:var(--font-body); font-weight:800; opacity:.9; }
+
+#ribbonWrap{
+  position:relative; z-index:2; width:100%; max-width:900px;
+  height:clamp(70px,10vh,110px);
+  border-top:1px solid rgba(255,255,255,.22); border-bottom:1px solid rgba(255,255,255,.22);
+  border-radius:14px; background:rgba(0,0,0,.18); overflow:hidden;
+}
+#ribbonWrap.hidden{display:none;}
+#ribbon{ position:absolute; top:0; left:0; height:100%; display:flex; will-change:transform; }
+.rseg{
+  height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; flex-shrink:0; position:relative; transition:filter .3s; filter:brightness(.72);
+}
+.rseg::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:7px;
+  background-image:repeating-linear-gradient(to right, rgba(255,255,255,.32) 0, rgba(255,255,255,.32) 1.5px, transparent 1.5px, transparent 42px);
+  pointer-events:none;
+}
+.rseg::after{
+  content:""; position:absolute; bottom:0; left:0; right:0; height:7px;
+  background-image:repeating-linear-gradient(to right, rgba(255,255,255,.32) 0, rgba(255,255,255,.32) 1.5px, transparent 1.5px, transparent 42px);
+  pointer-events:none;
+}
+.rseg.active{ filter:brightness(1); }
+.rseg .rlabel{
+  font-family:var(--font-body); font-weight:700; font-size:clamp(10px,1.1vw,14px);
+  text-transform:uppercase; letter-spacing:.05em; color:#fff; white-space:nowrap;
+}
+.rseg .remoji{ font-size:clamp(16px,2vw,24px); }
+#pointer{ position:absolute; top:0; left:50%; transform:translateX(-50%); height:100%; width:0; z-index:3; pointer-events:none; }
+#pointer::before{ content:""; position:absolute; top:0; left:-1.5px; width:3px; height:100%; background:#fff; box-shadow:0 0 10px rgba(0,0,0,.5); }
+#pointer::after{
+  content:""; position:absolute; top:-1px; left:50%; transform:translateX(-50%);
+  width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent;
+  border-top:10px solid #fff; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));
+}
+
+#settingsOverlay{
+  position:fixed; inset:0; z-index:10; background:rgba(6,9,18,.62); backdrop-filter:blur(3px);
+  display:flex; align-items:center; justify-content:center; opacity:1; transition:opacity .2s;
+}
+#settingsOverlay.hidden{ opacity:0; pointer-events:none; }
+#settingsPanel{
+  width:min(640px, 92vw); max-height:90vh; overflow:hidden;
+  background:#161C2C; border:1px solid rgba(255,255,255,.1); border-radius:22px;
+  color:#fff; box-shadow:0 30px 80px rgba(0,0,0,.5);
+  display:flex; flex-direction:column;
+}
+#settingsHeader{ padding:clamp(18px,3vw,28px) clamp(20px,3vw,28px) 0; flex-shrink:0; }
+#settingsHeader h2{ font-family:var(--font-body); font-weight:800; font-size:22px; margin:0 0 4px; }
+#closeSettings{
+  float:right; width:38px; height:38px; border-radius:50%; border:none;
+  background:rgba(255,255,255,.1); color:#fff; font-size:18px; cursor:pointer;
+}
+#closeSettings:active{transform:scale(.9);}
+
+#tabBar{
+  display:flex; gap:4px; overflow-x:auto; padding:14px clamp(20px,3vw,28px) 0;
+  flex-shrink:0; border-bottom:1px solid rgba(255,255,255,.08);
+}
+.tab-btn{
+  background:none; border:none; color:rgba(255,255,255,.55);
+  font-family:var(--font-body); font-weight:700; font-size:13px;
+  padding:10px 12px; cursor:pointer; white-space:nowrap;
+  border-bottom:3px solid transparent; margin-bottom:-1px;
+}
+.tab-btn.active{ color:#fff; border-bottom-color:#5B8DEF; }
+
+#settingsBody{ padding:20px clamp(20px,3vw,28px) clamp(20px,3vw,28px); overflow-y:auto; }
+.tab-panel{ display:none; }
+.tab-panel.active{ display:block; }
+
+.subtabs{ display:flex; gap:8px; margin-bottom:16px; }
+.subtab-btn{
+  flex:1; padding:10px; border-radius:10px; border:1.5px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.05); color:#fff; font-family:var(--font-body);
+  font-weight:700; font-size:13px; cursor:pointer;
+}
+.subtab-btn.selected{ border-color:#5B8DEF; background:rgba(91,141,239,.22); }
+.subtab-panel{ display:none; }
+.subtab-panel.selected{ display:block; }
+
+.choice-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.choice{
+  padding:16px 10px; border-radius:14px; border:1.5px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.05); color:#fff; font-family:var(--font-body);
+  font-weight:700; font-size:15px; cursor:pointer; transition:all .15s;
+}
+.choice.selected{ border-color:#5B8DEF; background:rgba(91,141,239,.22); }
+.choice:active{transform:scale(.97);}
+
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; padding:4px 2px 18px; }
+.toggle-row span{font-weight:600;font-size:15px;}
+.switch{position:relative;display:inline-block;width:52px;height:30px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{ position:absolute;cursor:pointer;inset:0; background:rgba(255,255,255,.2); border-radius:30px; transition:.2s; }
+.slider::before{ content:""; position:absolute; height:24px;width:24px; left:3px;top:3px; background:#fff; border-radius:50%; transition:.2s; }
+input:checked + .slider{background:#5B8DEF;}
+input:checked + .slider::before{transform:translateX(22px);}
+
+.sound-option{
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; margin-bottom:8px; border-radius:12px;
+  border:1.5px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
+  color:#fff; font-family:var(--font-body); font-weight:600; font-size:15px; cursor:pointer;
+}
+.sound-option.selected{ border-color:#5B8DEF; background:rgba(91,141,239,.18); }
+.sound-option .play{ opacity:.7; font-size:13px; }
+
+.hint{ font-size:12px; opacity:.55; line-height:1.5; margin-top:4px; }
+.section-title{ font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; opacity:.55; margin:0 0 12px; }
+
+.test-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.test-row select, .test-row input[type=time]{
+  padding:12px 10px; border-radius:12px; border:1.5px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.05); color:#fff; font-family:var(--font-body);
+  font-weight:600; font-size:14px; color-scheme:dark; width:100%;
+}
+.test-buttons{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+
+.block-card{
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1);
+  border-radius:14px; padding:14px; margin-bottom:12px;
+}
+.block-card h4{ margin:0 0 10px; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; opacity:.8; }
+.time-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.time-row label{ font-size:13px; font-weight:600; opacity:.75; width:110px; flex-shrink:0; }
+.time-row input[type=time]{
+  flex:1; padding:9px 10px; border-radius:10px; border:1.5px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.06); color:#fff; font-family:var(--font-body); font-weight:600;
+  color-scheme:dark;
+}
+.group-label{ font-size:11px; font-weight:800; opacity:.5; text-transform:uppercase; letter-spacing:.06em; margin:10px 0 6px; }
+
+.seg-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.seg-row .seg-color{ width:14px; height:14px; border-radius:4px; flex-shrink:0; }
+.seg-row label{ flex:1; font-size:14px; font-weight:600; }
+.seg-row input[type=number]{
+  width:80px; padding:9px 10px; border-radius:10px; border:1.5px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.06); color:#fff; font-family:var(--font-body); font-weight:700;
+  text-align:center;
+}
+.seg-total-row{
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.1);
+  font-weight:800; font-size:14px;
+}
+.seg-total-row.ok{ color:#4ADE80; }
+.seg-total-row.bad{ color:#F87171; }
+.btn-primary{
+  width:100%; padding:14px; border-radius:12px; border:none; background:#5B8DEF; color:#fff;
+  font-family:var(--font-body); font-weight:800; font-size:14px; cursor:pointer; margin-top:12px;
+}
+.btn-primary:active{transform:scale(.98);}
+.btn-secondary{
+  width:100%; padding:12px; border-radius:12px; border:1.5px solid rgba(255,255,255,.2);
+  background:transparent; color:#fff; font-family:var(--font-body); font-weight:700;
+  font-size:13px; cursor:pointer; margin-top:8px;
+}
+#saveMsg{ font-size:13px; font-weight:700; margin-top:8px; min-height:18px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="topbar">
+    <div id="topRight">
+      <span id="testBadge" title="Tap to reset to real time">TEST</span>
+      <span id="clock">--:--</span>
+      <button class="icon-btn" id="muteBtn" title="Mute">🔊</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <div id="mainWrap">
+    <div id="center">
+      <div id="periodLabel">—</div>
+      <div id="segEmoji">🕐</div>
+      <div id="segName">Loading</div>
+      <div id="countdown">--:--</div>
+      <div id="subline"></div>
+    </div>
+
+    <div id="diceArea">
+      <div id="diceOverlay">
+        <div id="diceFaces"></div>
+        <div id="diceTotal"></div>
+      </div>
+    </div>
+
+    <div id="ribbonWrap">
+      <div id="ribbon"></div>
+      <div id="pointer"></div>
+    </div>
+  </div>
+</div>
+
+<div id="settingsOverlay" class="hidden">
+  <div id="settingsPanel">
+    <div id="settingsHeader">
+      <button id="closeSettings">✕</button>
+      <h2>Settings</h2>
+    </div>
+
+    <div id="tabBar">
+      <button class="tab-btn active" data-tab="lunch">🍽️ Lunch</button>
+      <button class="tab-btn" data-tab="sound">🔊 Sound</button>
+      <button class="tab-btn" data-tab="bell">📅 Bell Schedule</button>
+      <button class="tab-btn" data-tab="segments">⏱️ Segments</button>
+      <button class="tab-btn" data-tab="dice">🎲 Dice</button>
+      <button class="tab-btn" data-tab="test">🧪 Test Mode</button>
+    </div>
+
+    <div id="settingsBody">
+
+      <div class="tab-panel active" data-panel="lunch">
+        <div class="section-title">4th Period Lunch Group</div>
+        <div class="choice-row">
+          <button class="choice" data-lunch="1">1st Lunch</button>
+          <button class="choice" data-lunch="2">2nd Lunch</button>
+        </div>
+      </div>
+
+      <div class="tab-panel" data-panel="sound">
+        <div class="section-title">Sound</div>
+        <div class="toggle-row">
+          <span>Mute all sound</span>
+          <label class="switch">
+            <input type="checkbox" id="muteToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="soundList"></div>
+        <div class="hint">Plays once when Cleanup begins each period. Tap a sound to select it and hear a preview.</div>
+      </div>
+
+      <div class="tab-panel" data-panel="bell">
+        <div class="subtabs">
+          <button class="subtab-btn selected" data-bellday="mh">Mon–Thu</button>
+          <button class="subtab-btn" data-bellday="f">Friday</button>
+        </div>
+        <div id="bellEditorMh" class="subtab-panel selected"></div>
+        <div id="bellEditorF" class="subtab-panel"></div>
+        <div class="hint">Editing a period's start/end time automatically adjusts the passing time before/after it. Changes apply immediately and last for this session only — reloading the page restores your saved defaults, so it's always safe to share this file with other teachers.</div>
+        <button class="btn-secondary" id="resetBellBtn">Reset Bell Schedule to Default</button>
+      </div>
+
+      <div class="tab-panel" data-panel="segments">
+        <div class="subtabs">
+          <button class="subtab-btn selected" data-segday="mh">Mon–Thu</button>
+          <button class="subtab-btn" data-segday="f">Friday</button>
+        </div>
+        <div id="segEditorMh" class="subtab-panel selected"></div>
+        <div id="segEditorF" class="subtab-panel"></div>
+      </div>
+
+      <div class="tab-panel" data-panel="dice">
+        <div class="toggle-row">
+          <span>Roll dice when screen is tapped</span>
+          <label class="switch">
+            <input type="checkbox" id="diceEnabledToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="section-title">Dice Type</div>
+        <div id="diceTypeList" class="choice-row" style="margin-bottom:20px;"></div>
+        <div class="section-title">Dice Sound</div>
+        <div id="diceSoundList"></div>
+        <div class="hint">Tapping anywhere on the clock screen rolls and briefly displays the result, then fades away.</div>
+      </div>
+
+      <div class="tab-panel" data-panel="test">
+        <div class="section-title">Simulate a Day / Time</div>
+        <div class="test-row">
+          <select id="testDay">
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+            <option value="0">Sunday</option>
+          </select>
+          <input type="time" id="testTime">
+        </div>
+        <div class="test-buttons">
+          <button class="choice" id="applyDayOnly">Change Day Only<br><span style="font-weight:500;font-size:11px;opacity:.7;">(keeps real clock time)</span></button>
+          <button class="choice" id="applyDayAndTime">Change Day + Time<br><span style="font-weight:500;font-size:11px;opacity:.7;">(simulates from that moment)</span></button>
+        </div>
+        <button class="btn-secondary" id="resetRealTime">Reset to Real Time</button>
+        <div class="hint" id="testModeStatus">Using real time.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== PERSISTED SETTINGS (survive reload) ===================== */
+const DEFAULT_SETTINGS = {
+  lunchGroup:'1', muted:false, sound:'soft',
+  diceEnabled:false, diceMode:'1d6', diceSound:'blip'
+};
+let settings = loadSettings();
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem('classroomTimerSettings_v2');
+    if(!raw) return {...DEFAULT_SETTINGS};
+    return Object.assign({...DEFAULT_SETTINGS}, JSON.parse(raw));
+  }catch(e){ return {...DEFAULT_SETTINGS}; }
+}
+function saveSettings(){
+  try{ localStorage.setItem('classroomTimerSettings_v2', JSON.stringify(settings)); }catch(e){}
+}
+
+/* ===================== SCHEDULE DATA (session-only edits) ===================== */
+// Fixed cleanup length for the final period of the day (7th), ending exactly at the bell.
+const LAST_PERIOD_CLEANUP_MIN = 5;
+
+const DEFAULT_TEMPLATES = {
+  mh:[
+    {name:'Unpack',           min:2,  color:'#F0A93B', emoji:'📦'},
+    {name:'Bell Work',        min:3,  color:'#F0622C', emoji:'✏️'},
+    {name:'Instruction',      min:7,  color:'#2FAE60', emoji:'🧑‍🏫'},
+    {name:'Independent Work', min:35, color:'#2E86DE', emoji:'📚'},
+    {name:'Cleanup',          min:3,  color:'#8E5FD1', emoji:'🧹'}
+  ],
+  f:[
+    {name:'Unpack',           min:2,  color:'#F0A93B', emoji:'📦'},
+    {name:'Bell Work',        min:3,  color:'#F0622C', emoji:'✏️'},
+    {name:'Instruction',      min:4,  color:'#2FAE60', emoji:'🧑‍🏫'},
+    {name:'Independent Work', min:30, color:'#2E86DE', emoji:'📚'},
+    {name:'Cleanup',          min:3,  color:'#8E5FD1', emoji:'🧹'}
+  ]
+};
+const PASSING_STYLE = {color:'#B08850', emoji:'👣'};
+const LUNCH_STYLE    = {color:'#E24A4A', emoji:'🍽️'};
+
+const DEFAULT_RAW = {
+  mh:[
+    {type:'period', name:'1st', start:'09:30', end:'10:24'},
+    {type:'period', name:'2nd', start:'10:27', end:'11:17'},
+    {type:'period', name:'3rd', start:'11:20', end:'12:10'},
+    {type:'lunch4', name:'4th',
+      g1:{lunchStart:'12:13',lunchEnd:'12:43',classStart:'12:46',classEnd:'13:36'},
+      g2:{classStart:'12:13',classEnd:'13:03',lunchStart:'13:06',lunchEnd:'13:36'}},
+    {type:'period', name:'5th', start:'13:39', end:'14:29'},
+    {type:'period', name:'6th', start:'14:32', end:'15:22'},
+    {type:'period', name:'7th', start:'15:25', end:'16:15'}
+  ],
+  f:[
+    {type:'period', name:'1st', start:'09:30', end:'10:12'},
+    {type:'period', name:'2nd', start:'10:15', end:'10:57'},
+    {type:'period', name:'3rd', start:'11:00', end:'11:42'},
+    {type:'lunch4', name:'4th',
+      g1:{lunchStart:'11:45',lunchEnd:'12:15',classStart:'12:18',classEnd:'13:00'},
+      g2:{classStart:'11:45',classEnd:'12:27',lunchStart:'12:30',lunchEnd:'13:00'}},
+    {type:'period', name:'5th', start:'13:03', end:'13:45'},
+    {type:'period', name:'6th', start:'13:48', end:'14:30'},
+    {type:'period', name:'7th', start:'14:33', end:'15:15'}
+  ]
+};
+
+function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+let currentRaw = deepClone(DEFAULT_RAW);
+let currentTemplates = deepClone(DEFAULT_TEMPLATES);
+
+function timeToMinutes(str){ const [h,m] = str.split(':').map(Number); return h*60+m; }
+
+const STANDARD_PERIOD_LEN = {
+  mh: DEFAULT_TEMPLATES.mh.reduce((a,s)=>a+s.min,0),
+  f:  DEFAULT_TEMPLATES.f.reduce((a,s)=>a+s.min,0)
+};
+
+function expandClassSegments(startMin, tmpl, periodName, blockId, blockEndMin, finalCleanupMin){
+  const active = tmpl.filter(t=>t.min>0);
+  let segs = [], cursor = startMin;
+  active.forEach(t=>{
+    segs.push({ name:t.name, color:t.color, emoji:t.emoji, start:cursor, end:cursor+t.min, periodName, blockId, sound:t.name==='Cleanup' });
+    cursor += t.min;
+  });
+  if(blockEndMin==null || segs.length===0) return segs;
+
+  if(finalCleanupMin!=null && segs.length>=1){
+    const cleanupStart = blockEndMin - finalCleanupMin;
+    const cleanupIdx = segs.findIndex(s=>s.name==='Cleanup');
+    if(cleanupIdx!==-1){
+      segs[cleanupIdx].start = cleanupStart;
+      segs[cleanupIdx].end = blockEndMin;
+      if(cleanupIdx>0) segs[cleanupIdx-1].end = cleanupStart;
+    } else if(segs.length){
+      segs[segs.length-1].end = blockEndMin;
+    }
+    return segs;
+  }
+
+  const extra = blockEndMin - segs[segs.length-1].end;
+  if(extra===0) return segs;
+  const idx = segs.findIndex(s=>s.name==='Independent Work');
+  if(idx!==-1){
+    for(let i=idx;i<segs.length;i++){
+      if(i>idx) segs[i].start += extra;
+      segs[i].end += extra;
+    }
+  } else {
+    segs[segs.length-1].end += extra;
+  }
+  return segs;
+}
+function passingSeg(s,e,blockId){
+  if(e<=s) return null;
+  return {name:'Passing Time', color:PASSING_STYLE.color, emoji:PASSING_STYLE.emoji, start:s, end:e, periodName:'', blockId, sound:false, isPassing:true};
+}
+function lunchSeg(s,e,periodName,blockId){
+  return {name:'Lunch', color:LUNCH_STYLE.color, emoji:LUNCH_STYLE.emoji, start:s, end:e, periodName, blockId, sound:false, isLunch:true};
+}
+
+function buildDaySegments(dayType){
+  const tmpl = currentTemplates[dayType];
+  const blocks = currentRaw[dayType];
+  let segments = [];
+  let prevEnd = null;
+  let blockId = 0;
+
+  blocks.forEach(b=>{
+    let blockStart, blockEnd, subSegs=[];
+
+    if(b.type==='period'){
+      blockStart = timeToMinutes(b.start);
+      blockEnd   = timeToMinutes(b.end);
+      const finalCleanup = (b.name==='7th') ? LAST_PERIOD_CLEANUP_MIN : null;
+      subSegs = expandClassSegments(blockStart, tmpl, b.name+' Period', blockId, blockEnd, finalCleanup);
+    } else {
+      const g = settings.lunchGroup==='2' ? b.g2 : b.g1;
+      if(settings.lunchGroup==='1'){
+        const lS=timeToMinutes(g.lunchStart), lE=timeToMinutes(g.lunchEnd);
+        const cS=timeToMinutes(g.classStart), cE=timeToMinutes(g.classEnd);
+        subSegs.push(lunchSeg(lS,lE,b.name+' Period',blockId)); blockId++;
+        const p = passingSeg(lE,cS,blockId); if(p) subSegs.push(p);
+        blockId++;
+        subSegs = subSegs.concat(expandClassSegments(cS, tmpl, b.name+' Period', blockId, cE, null));
+        blockStart=lS; blockEnd=cE;
+      } else {
+        const cS=timeToMinutes(g.classStart), cE=timeToMinutes(g.classEnd);
+        const lS=timeToMinutes(g.lunchStart), lE=timeToMinutes(g.lunchEnd);
+        subSegs = expandClassSegments(cS, tmpl, b.name+' Period', blockId, cE, null);
+        blockId++;
+        const p = passingSeg(cE,lS,blockId); if(p) subSegs.push(p);
+        blockId++;
+        subSegs.push(lunchSeg(lS,lE,b.name+' Period',blockId));
+        blockStart=cS; blockEnd=lE;
+      }
+    }
+
+    if(prevEnd!==null && blockStart>prevEnd){
+      const p = passingSeg(prevEnd, blockStart, blockId);
+      if(p) segments.push(p);
+      blockId++;
+    }
+    segments = segments.concat(subSegs);
+    prevEnd = blockEnd;
+    blockId++;
+  });
+
+  return segments;
+}
+
+let testState = { mode:'off', weekday:null, timeOffsetMs:0 };
+function getNow(){ return new Date(Date.now() + testState.timeOffsetMs); }
+function effectiveWeekday(){
+  if(testState.mode==='day' || testState.mode==='full') return testState.weekday;
+  return new Date().getDay();
+}
+
+let cachedDayType=null, cachedLunchGroup=null, cachedSegments=null, cachedScheduleVersion=0;
+let scheduleVersion = 0;
+function getTodaySegments(){
+  const day = effectiveWeekday();
+  const dayType = day===5 ? 'f' : (day>=1 && day<=4 ? 'mh' : null);
+  if(!dayType) return {dayType:null, segments:[]};
+  if(dayType!==cachedDayType || settings.lunchGroup!==cachedLunchGroup || scheduleVersion!==cachedScheduleVersion){
+    cachedSegments = buildDaySegments(dayType);
+    cachedDayType = dayType;
+    cachedLunchGroup = settings.lunchGroup;
+    cachedScheduleVersion = scheduleVersion;
+  }
+  return {dayType, segments:cachedSegments};
+}
+
+/* ===================== SOUND ENGINE ===================== */
+let audioCtx=null, masterBus=null;
+function ensureAudio(){
+  if(!audioCtx){
+    try{
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const comp = audioCtx.createDynamicsCompressor();
+      comp.threshold.value=-10; comp.knee.value=6; comp.ratio.value=10;
+      comp.attack.value=0.003; comp.release.value=0.25;
+      comp.connect(audioCtx.destination);
+      masterBus = comp;
+    }catch(e){}
+  }
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume();
+}
+document.addEventListener('pointerdown', ensureAudio, {once:false});
+
+let activeNodes = [];
+function tone(freq, start, dur, type='sine', gainPeak=.55, attack=.02, noise=false){
+  if(!audioCtx || !masterBus) return;
+  const t0 = audioCtx.currentTime + start;
+  if(noise){
+    const bufferSize = Math.floor(audioCtx.sampleRate*dur);
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = Math.random()*2-1;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    const gain = audioCtx.createGain();
+    src.connect(gain); gain.connect(masterBus);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak, t0+attack);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    src.start(t0); src.stop(t0+dur+0.02);
+    activeNodes.push({osc:src, gain});
+    return;
+  }
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type=type; osc.frequency.value=freq;
+  osc.connect(gain); gain.connect(masterBus);
+  gain.gain.setValueAtTime(0, t0);
+  gain.gain.linearRampToValueAtTime(gainPeak, t0+attack);
+  gain.gain.setValueAtTime(gainPeak, t0+Math.max(attack+0.02, dur-0.35));
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+  osc.start(t0); osc.stop(t0+dur+0.05);
+  activeNodes.push({osc, gain});
+}
+function stopAllSounds(){
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  activeNodes.forEach(n=>{
+    try{
+      n.gain.gain.cancelScheduledValues(now);
+      n.gain.gain.setValueAtTime(n.gain.gain.value, now);
+      n.gain.gain.linearRampToValueAtTime(0, now+0.05);
+      n.osc.stop(now+0.06);
+    }catch(e){}
+  });
+  activeNodes = [];
+}
+
+const SOUNDS = {
+  soft: { label:'Soft Chime', play:()=>{
+    const notes=[880,698,523];
+    [0,2.6].forEach(t0=> notes.forEach((f,i)=> tone(f, t0+i*.4, 1.6, 'sine', .6, .08)));
+  }},
+  marimba: { label:'Marimba', play:()=>{
+    const run=[392,440,523,587,659];
+    for(let c=0;c<2;c++) run.forEach((f,i)=> tone(f, c*2.4 + i*.3, .9, 'triangle', .6, .015));
+  }},
+  retroBlip: { label:'Retro Blip', play:()=>{
+    const seq=[523,659,784,1046];
+    for(let c=0;c<4;c++) seq.forEach((f,i)=> tone(f, c*1.3 + i*.11, .3, 'square', .55, .005));
+  }},
+  coinRush: { label:'Coin Rush', play:()=>{
+    for(let i=0;i<24;i++){ tone(988, i*.21, .12, 'square', .5, .004); tone(1318, i*.21+.06, .12, 'square', .5, .004); }
+  }},
+  bossClear: { label:'Boss Clear', play:()=>{
+    const notes=[784,659,523,659,784,988,1318];
+    notes.forEach((f,i)=> tone(f, i*.35, .4, i<3?'square':'triangle', .58, .01));
+  }},
+  bonusRound: { label:'Bonus Round', play:()=>{
+    const pattern=[523,0,659,523,0,784,659,523]; let t=0;
+    for(let c=0;c<3;c++) pattern.forEach(f=>{ if(f) tone(f, t, .16, 'square', .55, .004); t+=.19; });
+  }},
+  levelUp: { label:'Level Up', play:()=>{
+    const scale=[523,587,659,698,784,880,988,1046];
+    scale.forEach((f,i)=> tone(f, i*.11, .15, 'square', .55, .006));
+    const chordStart = scale.length*.11;
+    [1046,1318,1568].forEach(f=> tone(f, chordStart, .8, 'triangle', .5, .05));
+  }},
+  powerUp: { label:'Power Up', play:()=>{
+    for(let i=0;i<16;i++){ const f=400+i*60; tone(f, i*.045, .06, 'square', .55, .005); }
+    tone(1568, 16*.045, .35, 'triangle', .5, .02);
+  }},
+  pixelChime: { label:'Pixel Chime', play:()=>{
+    const notes=[659,784,988,1318,988,1318,1568];
+    notes.forEach((f,i)=> tone(f, i*.16, .22, 'square', .55, .005));
+  }}
+};
+const DICE_SOUNDS = {
+  blip: { label:'Blip', play:()=>{ tone(900,0,.04,'square',.45,.003); tone(1300,.05,.05,'square',.4,.003); }},
+  click: { label:'Click', play:()=>{ tone(1400,0,.05,'square',.5,.002); }},
+  tick: { label:'Tick Tick', play:()=>{ for(let i=0;i<4;i++) tone(1600, i*.06, .03, 'square', .4, .002); }},
+  rattle: { label:'Rattle', play:()=>{ for(let i=0;i<8;i++) tone(0, i*.045, .035, null, .35, .002, true); }},
+  pop: { label:'Pop', play:()=>{ tone(300,0,.02,'square',.45,.002); tone(1200,.02,.06,'triangle',.5,.005); }}
+};
+
+function playSound(key){ stopAllSounds(); ensureAudio(); (SOUNDS[key]||SOUNDS.soft).play(); }
+function playDiceSound(key){ ensureAudio(); (DICE_SOUNDS[key]||DICE_SOUNDS.blip).play(); }
+
+let lastPlayedSegKey = null;
+function maybePlayCleanupSound(seg){
+  const key = seg.blockId+'-'+seg.start;
+  if(seg.sound && key!==lastPlayedSegKey){
+    lastPlayedSegKey = key;
+    if(!settings.muted) playSound(settings.sound);
+  }
+}
+
+/* ===================== DICE ===================== */
+const DICE_MODES = {
+  '1d4':  { label:'1 four-sided die',    roll:()=>[rand(1,4)] },
+  '1d6':  { label:'1 six-sided die',     roll:()=>[rand(1,6)] },
+  '2d6':  { label:'2 six-sided dice',    roll:()=>[rand(1,6),rand(1,6)] },
+  '1d12': { label:'1 twelve-sided die',  roll:()=>[rand(1,12)] },
+  '1d20': { label:'1 twenty-sided die',  roll:()=>[rand(1,20)] },
+  'd100': { label:'1 hundred-sided die', roll:()=>[rand(1,100)] }
+};
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+const diceArea = document.getElementById('diceArea');
+const diceOverlay = document.getElementById('diceOverlay');
+const diceFacesEl = document.getElementById('diceFaces');
+const diceTotalEl = document.getElementById('diceTotal');
+let diceHideTimer = null, diceFadeTimer = null;
+
+function rollDice(){
+  if(!settings.diceEnabled) return;
+  const mode = DICE_MODES[settings.diceMode] || DICE_MODES['1d6'];
+  const results = mode.roll();
+
+  if(!settings.muted) playDiceSound(settings.diceSound);
+
+  clearTimeout(diceHideTimer); clearTimeout(diceFadeTimer);
+
+  const multi = results.length>1;
+  const dieSize = multi ? 'clamp(56px,11vw,120px)' : 'clamp(72px,15vw,170px)';
+  const numSize = multi ? 'clamp(28px,6vw,60px)' : 'clamp(38px,8vw,88px)';
+
+  diceFacesEl.innerHTML = results.map(v=>
+    `<div class="die-face" style="width:${dieSize};height:${dieSize};font-size:${numSize};">${v}</div>`
+  ).join('');
+  diceTotalEl.textContent = multi ? ('Total: '+results.reduce((a,b)=>a+b,0)) : '';
+  diceTotalEl.style.fontSize = 'clamp(14px,2vw,22px)';
+
+  diceArea.classList.add('active');
+  diceOverlay.style.transition = 'none';
+  diceOverlay.style.opacity = '0';
+  diceOverlay.style.transform = `scale(.3) rotate(${rand(-14,14)}deg)`;
+  diceOverlay.style.filter = 'blur(0px)';
+  void diceOverlay.offsetWidth;
+  diceOverlay.style.transition = 'transform .4s cubic-bezier(.34,1.56,.64,1), opacity .3s ease';
+  diceOverlay.style.opacity = '1';
+  diceOverlay.style.transform = 'scale(1) rotate(0deg)';
+
+  diceHideTimer = setTimeout(()=>{
+    diceOverlay.style.transition = 'opacity .7s ease, transform .7s ease, filter .7s ease';
+    diceOverlay.style.opacity = '0';
+    diceOverlay.style.transform = 'scale(1.35) rotate(0deg)';
+    diceOverlay.style.filter = 'blur(14px)';
+    diceFadeTimer = setTimeout(()=>{ diceArea.classList.remove('active'); }, 700);
+  }, 2200);
+}
+
+document.getElementById('app').addEventListener('click', (e)=>{
+  if(e.target.closest('#topbar')) return;
+  rollDice();
+});
+
+/* ===================== RENDER ===================== */
+const el = {
+  periodLabel: document.getElementById('periodLabel'),
+  clock: document.getElementById('clock'),
+  segEmoji: document.getElementById('segEmoji'),
+  segName: document.getElementById('segName'),
+  countdown: document.getElementById('countdown'),
+  subline: document.getElementById('subline'),
+  ribbon: document.getElementById('ribbon'),
+  ribbonWrap: document.getElementById('ribbonWrap'),
+};
+const PX_PER_MIN = 42;
+let ribbonBuiltForBlockId = null;
+
+function fmtClock(d){ return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+function fmtMMSS(totalSeconds){
+  totalSeconds = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(totalSeconds/3600);
+  const m = Math.floor((totalSeconds%3600)/60);
+  const s = totalSeconds%60;
+  if(h>0) return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function buildRibbon(blockSegs){
+  el.ribbon.innerHTML = '';
+  blockSegs.forEach(seg=>{
+    const div = document.createElement('div');
+    div.className = 'rseg';
+    div.style.width = ((seg.end-seg.start)*PX_PER_MIN)+'px';
+    div.style.background = seg.color;
+    div.innerHTML = `<span class="remoji">${seg.emoji}</span><span class="rlabel">${seg.name}</span>`;
+    el.ribbon.appendChild(div);
+  });
+}
+function positionRibbon(blockSegs, nowSec){
+  const firstStartSec = blockSegs[0].start*60;
+  const offsetPx = ((nowSec-firstStartSec)/60)*PX_PER_MIN;
+  const viewportCenter = el.ribbonWrap.clientWidth/2;
+  el.ribbon.style.transform = `translateX(${viewportCenter-offsetPx}px)`;
+  const kids = el.ribbon.children;
+  for(let i=0;i<blockSegs.length;i++){
+    const isActive = nowSec>=blockSegs[i].start*60 && nowSec<blockSegs[i].end*60;
+    kids[i].classList.toggle('active', isActive);
+  }
+}
+function nextPeriodLabel(segments, seg){
+  const idx = segments.indexOf(seg);
+  const next = segments[idx+1];
+  if(next && next.periodName) return next.periodName.split(' ')[0] + ' period';
+  return 'next period';
+}
+function setBg(color){ document.body.style.background = color; }
+
+function render(){
+  const now = getNow();
+  el.clock.textContent = fmtClock(now);
+  const nowSec = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+
+  const {dayType, segments} = getTodaySegments();
+
+  if(!dayType){
+    setBg('#101B33');
+    el.periodLabel.textContent = 'WEEKEND';
+    el.segEmoji.textContent = '🌤️';
+    el.segName.textContent = 'No School Today';
+    el.countdown.textContent = fmtClock(now);
+    el.subline.textContent = '';
+    el.ribbonWrap.classList.add('hidden');
+    return;
+  }
+
+  const first = segments[0], last = segments[segments.length-1];
+
+  if(nowSec < first.start*60){
+    setBg('#101B33');
+    el.periodLabel.textContent = 'BEFORE SCHOOL';
+    el.segEmoji.textContent = '☀️';
+    el.segName.textContent = 'School Starts Soon';
+    el.countdown.textContent = fmtMMSS(first.start*60 - nowSec);
+    el.subline.textContent = 'until 1st period begins';
+    el.ribbonWrap.classList.add('hidden');
+    return;
+  }
+  if(nowSec >= last.end*60){
+    setBg('#161225');
+    el.periodLabel.textContent = "SCHOOL'S OUT";
+    el.segEmoji.textContent = '🏁';
+    el.segName.textContent = 'Time Since Dismissal';
+    el.countdown.textContent = fmtMMSS(nowSec - last.end*60);
+    el.subline.textContent = '';
+    el.ribbonWrap.classList.add('hidden');
+    return;
+  }
+
+  const seg = segments.find(s=> nowSec>=s.start*60 && nowSec<s.end*60);
+  if(!seg) return;
+
+  setBg(seg.color);
+  el.periodLabel.textContent = seg.periodName || (seg.isPassing ? 'PASSING TIME' : '');
+  el.segEmoji.textContent = seg.emoji;
+  el.segName.textContent = seg.name;
+  el.countdown.textContent = fmtMMSS(seg.end*60 - nowSec);
+  el.subline.textContent = seg.isPassing ? ('until ' + nextPeriodLabel(segments, seg)) : '';
+
+  el.ribbonWrap.classList.remove('hidden');
+  const blockSegs = segments.filter(s=>s.blockId===seg.blockId);
+  if(ribbonBuiltForBlockId !== seg.blockId){
+    buildRibbon(blockSegs);
+    ribbonBuiltForBlockId = seg.blockId;
+  }
+  positionRibbon(blockSegs, nowSec);
+  maybePlayCleanupSound(seg);
+}
+
+render();
+setInterval(render, 250);
+window.addEventListener('resize', ()=>{ ribbonBuiltForBlockId=null; });
+
+/* ===================== SETTINGS UI ===================== */
+const settingsOverlay = document.getElementById('settingsOverlay');
+document.getElementById('settingsBtn').addEventListener('click', ()=>{
+  ensureAudio();
+  syncAllSettingsUI();
+  settingsOverlay.classList.remove('hidden');
+});
+document.getElementById('closeSettings').addEventListener('click', ()=> settingsOverlay.classList.add('hidden'));
+settingsOverlay.addEventListener('click', (e)=>{ if(e.target===settingsOverlay) settingsOverlay.classList.add('hidden'); });
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`.tab-panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+  });
+});
+
+document.querySelectorAll('.choice[data-lunch]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    settings.lunchGroup = btn.dataset.lunch;
+    saveSettings();
+    scheduleVersion++;
+    ribbonBuiltForBlockId = null;
+    syncAllSettingsUI();
+    render();
+  });
+});
+
+const muteToggle = document.getElementById('muteToggle');
+muteToggle.addEventListener('change', ()=>{ settings.muted = muteToggle.checked; saveSettings(); updateMuteIcon(); });
+document.getElementById('muteBtn').addEventListener('click', ()=>{
+  settings.muted = !settings.muted; saveSettings(); updateMuteIcon(); syncAllSettingsUI();
+});
+function updateMuteIcon(){ document.getElementById('muteBtn').textContent = settings.muted ? '🔇' : '🔊'; }
+
+const soundList = document.getElementById('soundList');
+Object.keys(SOUNDS).forEach(key=>{
+  const btn = document.createElement('button');
+  btn.className = 'sound-option';
+  btn.dataset.sound = key;
+  btn.innerHTML = `<span>${SOUNDS[key].label}</span><span class="play">▶ preview</span>`;
+  btn.addEventListener('click', ()=>{ settings.sound = key; saveSettings(); playSound(key); syncAllSettingsUI(); });
+  soundList.appendChild(btn);
+});
+
+const diceEnabledToggle = document.getElementById('diceEnabledToggle');
+diceEnabledToggle.addEventListener('change', ()=>{ settings.diceEnabled = diceEnabledToggle.checked; saveSettings(); });
+
+const diceTypeList = document.getElementById('diceTypeList');
+Object.keys(DICE_MODES).forEach(key=>{
+  const btn = document.createElement('button');
+  btn.className = 'choice';
+  btn.dataset.dicemode = key;
+  btn.textContent = DICE_MODES[key].label;
+  btn.addEventListener('click', ()=>{ settings.diceMode = key; saveSettings(); syncAllSettingsUI(); });
+  diceTypeList.appendChild(btn);
+});
+const diceSoundList = document.getElementById('diceSoundList');
+Object.keys(DICE_SOUNDS).forEach(key=>{
+  const btn = document.createElement('button');
+  btn.className = 'sound-option';
+  btn.dataset.dicesound = key;
+  btn.innerHTML = `<span>${DICE_SOUNDS[key].label}</span><span class="play">▶ preview</span>`;
+  btn.addEventListener('click', ()=>{ settings.diceSound = key; saveSettings(); playDiceSound(key); syncAllSettingsUI(); });
+  diceSoundList.appendChild(btn);
+});
+
+function syncAllSettingsUI(){
+  document.querySelectorAll('.choice[data-lunch]').forEach(b=> b.classList.toggle('selected', b.dataset.lunch===settings.lunchGroup));
+  document.querySelectorAll('.sound-option[data-sound]').forEach(b=> b.classList.toggle('selected', b.dataset.sound===settings.sound));
+  document.querySelectorAll('.choice[data-dicemode]').forEach(b=> b.classList.toggle('selected', b.dataset.dicemode===settings.diceMode));
+  document.querySelectorAll('.sound-option[data-dicesound]').forEach(b=> b.classList.toggle('selected', b.dataset.dicesound===settings.diceSound));
+  muteToggle.checked = settings.muted;
+  diceEnabledToggle.checked = settings.diceEnabled;
+  updateMuteIcon();
+  buildBellEditor('mh'); buildBellEditor('f');
+  buildSegEditor('mh'); buildSegEditor('f');
+}
+
+document.querySelectorAll('.subtab-btn[data-bellday]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.subtab-btn[data-bellday]').forEach(b=>b.classList.remove('selected'));
+    document.getElementById('bellEditorMh').classList.remove('selected');
+    document.getElementById('bellEditorF').classList.remove('selected');
+    btn.classList.add('selected');
+    document.getElementById(btn.dataset.bellday==='mh' ? 'bellEditorMh' : 'bellEditorF').classList.add('selected');
+  });
+});
+document.getElementById('resetBellBtn').addEventListener('click', ()=>{
+  currentRaw = deepClone(DEFAULT_RAW);
+  scheduleVersion++;
+  ribbonBuiltForBlockId = null;
+  buildBellEditor('mh'); buildBellEditor('f');
+  render();
+});
+
+function periodDisplayLabel(dayType, blockName){
+  return blockName + (blockName==='7th' ? ' Period (fixed 5-min cleanup applies automatically)' : ' Period');
+}
+
+function buildBellEditor(dayType){
+  const container = document.getElementById(dayType==='mh' ? 'bellEditorMh' : 'bellEditorF');
+  container.innerHTML = '';
+  currentRaw[dayType].forEach((block, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'block-card';
+    if(block.type==='period'){
+      card.innerHTML = `
+        <h4>${periodDisplayLabel(dayType, block.name)}</h4>
+        <div class="time-row"><label>Start</label><input type="time" data-idx="${idx}" data-field="start" value="${block.start}"></div>
+        <div class="time-row"><label>End</label><input type="time" data-idx="${idx}" data-field="end" value="${block.end}"></div>
+      `;
+    } else {
+      card.innerHTML = `
+        <h4>${block.name} Period (Lunch Block)</h4>
+        <div class="group-label">Lunch Group 1</div>
+        <div class="time-row"><label>Lunch Start</label><input type="time" data-idx="${idx}" data-field="g1.lunchStart" value="${block.g1.lunchStart}"></div>
+        <div class="time-row"><label>Lunch End</label><input type="time" data-idx="${idx}" data-field="g1.lunchEnd" value="${block.g1.lunchEnd}"></div>
+        <div class="time-row"><label>Class Start</label><input type="time" data-idx="${idx}" data-field="g1.classStart" value="${block.g1.classStart}"></div>
+        <div class="time-row"><label>Class End</label><input type="time" data-idx="${idx}" data-field="g1.classEnd" value="${block.g1.classEnd}"></div>
+        <div class="group-label">Lunch Group 2</div>
+        <div class="time-row"><label>Class Start</label><input type="time" data-idx="${idx}" data-field="g2.classStart" value="${block.g2.classStart}"></div>
+        <div class="time-row"><label>Class End</label><input type="time" data-idx="${idx}" data-field="g2.classEnd" value="${block.g2.classEnd}"></div>
+        <div class="time-row"><label>Lunch Start</label><input type="time" data-idx="${idx}" data-field="g2.lunchStart" value="${block.g2.lunchStart}"></div>
+        <div class="time-row"><label>Lunch End</label><input type="time" data-idx="${idx}" data-field="g2.lunchEnd" value="${block.g2.lunchEnd}"></div>
+      `;
+    }
+    container.appendChild(card);
+  });
+  container.querySelectorAll('input[type=time]').forEach(input=>{
+    input.addEventListener('change', ()=>{
+      const idx = parseInt(input.dataset.idx,10);
+      const field = input.dataset.field;
+      const block = currentRaw[dayType][idx];
+      if(field.includes('.')){
+        const [g,f] = field.split('.');
+        block[g][f] = input.value;
+      } else {
+        block[field] = input.value;
+      }
+      scheduleVersion++;
+      ribbonBuiltForBlockId = null;
+      render();
+    });
+  });
+}
+
+document.querySelectorAll('.subtab-btn[data-segday]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.subtab-btn[data-segday]').forEach(b=>b.classList.remove('selected'));
+    document.getElementById('segEditorMh').classList.remove('selected');
+    document.getElementById('segEditorF').classList.remove('selected');
+    btn.classList.add('selected');
+    document.getElementById(btn.dataset.segday==='mh' ? 'segEditorMh' : 'segEditorF').classList.add('selected');
+  });
+});
+
+function buildSegEditor(dayType){
+  const container = document.getElementById(dayType==='mh' ? 'segEditorMh' : 'segEditorF');
+  const dayLabel = dayType==='mh' ? 'Mon–Thu' : 'Friday';
+  const standardLen = STANDARD_PERIOD_LEN[dayType];
+  container.innerHTML = `
+    <div class="hint" style="margin-bottom:14px;">
+      Standard ${dayLabel} period length is <strong>${standardLen} minutes</strong>.
+      Your five segments below must add up to exactly that. Set a segment to 0 if you don't use it.
+      (1st period's extra minutes and 7th period's fixed cleanup are handled automatically and don't need to match here.)
+    </div>
+    <div id="segRows_${dayType}"></div>
+    <div class="seg-total-row" id="segTotalRow_${dayType}"></div>
+    <button class="btn-primary" id="segSaveBtn_${dayType}">Save Segment Lengths</button>
+    <button class="btn-secondary" id="segResetBtn_${dayType}">Reset to Default</button>
+    <div id="segSaveMsg_${dayType}"></div>
+  `;
+  const rowsEl = document.getElementById('segRows_'+dayType);
+  currentTemplates[dayType].forEach((seg, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'seg-row';
+    row.innerHTML = `
+      <span class="seg-color" style="background:${seg.color}"></span>
+      <label>${seg.emoji} ${seg.name}</label>
+      <input type="number" min="0" step="1" data-idx="${idx}" value="${seg.min}">
+    `;
+    rowsEl.appendChild(row);
+  });
+
+  function updateTotal(){
+    const inputs = rowsEl.querySelectorAll('input[type=number]');
+    let total = 0;
+    inputs.forEach(i=> total += (parseInt(i.value,10)||0));
+    const diff = total - standardLen;
+    const totalRow = document.getElementById('segTotalRow_'+dayType);
+    if(diff===0){
+      totalRow.className = 'seg-total-row ok';
+      totalRow.textContent = `Total: ${total} min ✓ matches ${standardLen} min`;
+    } else if(diff>0){
+      totalRow.className = 'seg-total-row bad';
+      totalRow.textContent = `Total: ${total} min — ${diff} min OVER ${standardLen} min`;
+    } else {
+      totalRow.className = 'seg-total-row bad';
+      totalRow.textContent = `Total: ${total} min — ${Math.abs(diff)} min SHORT of ${standardLen} min`;
+    }
+    return {total, diff};
+  }
+  rowsEl.querySelectorAll('input[type=number]').forEach(inp=>{
+    inp.addEventListener('input', updateTotal);
+  });
+  updateTotal();
+
+  document.getElementById('segSaveBtn_'+dayType).addEventListener('click', ()=>{
+    const {diff} = updateTotal();
+    const msgEl = document.getElementById('segSaveMsg_'+dayType);
+    if(diff!==0){
+      msgEl.style.color = '#F87171';
+      msgEl.textContent = diff>0
+        ? `Can't save — this is ${diff} minute${diff===1?'':'s'} over the ${standardLen}-minute period. Reduce a segment before saving.`
+        : `Can't save — this is ${Math.abs(diff)} minute${Math.abs(diff)===1?'':'s'} short of the ${standardLen}-minute period. Add the missing time before saving.`;
+      return;
+    }
+    const inputs = rowsEl.querySelectorAll('input[type=number]');
+    inputs.forEach(i=>{ currentTemplates[dayType][parseInt(i.dataset.idx,10)].min = parseInt(i.value,10)||0; });
+    scheduleVersion++;
+    ribbonBuiltForBlockId = null;
+    msgEl.style.color = '#4ADE80';
+    msgEl.textContent = 'Saved for this session.';
+    render();
+  });
+  document.getElementById('segResetBtn_'+dayType).addEventListener('click', ()=>{
+    currentTemplates[dayType] = deepClone(DEFAULT_TEMPLATES[dayType]);
+    scheduleVersion++;
+    ribbonBuiltForBlockId = null;
+    buildSegEditor(dayType);
+    render();
+  });
+}
+
+const testDaySel = document.getElementById('testDay');
+const testTimeInput = document.getElementById('testTime');
+const testModeStatus = document.getElementById('testModeStatus');
+const testBadge = document.getElementById('testBadge');
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function prefillTestInputsIfEmpty(){
+  const now = new Date();
+  if(!testTimeInput.value) testTimeInput.value = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(!testDaySel.value) testDaySel.value = String(now.getDay());
+}
+function updateTestBadge(){
+  if(testState.mode!=='off'){
+    testBadge.classList.add('show');
+    const n = getNow();
+    if(testState.mode==='day'){
+      testModeStatus.textContent = `Simulating ${DAY_NAMES[testState.weekday]}, real live time (${fmtClock(n)}). Tap "Reset to Real Time" or the TEST badge to return to today.`;
+    } else {
+      testModeStatus.textContent = `Simulating ${DAY_NAMES[testState.weekday]} ${fmtClock(n)}, ticking live from there. Tap "Reset to Real Time" or the TEST badge to return to now.`;
+    }
+  } else {
+    testBadge.classList.remove('show');
+    testModeStatus.textContent = 'Using real time.';
+  }
+}
+function invalidateForTestChange(){
+  cachedDayType = null;
+  ribbonBuiltForBlockId = null;
+  lastPlayedSegKey = null;
+  updateTestBadge();
+  render();
+}
+document.getElementById('applyDayOnly').addEventListener('click', ()=>{
+  prefillTestInputsIfEmpty();
+  testState.mode = 'day';
+  testState.weekday = parseInt(testDaySel.value,10);
+  testState.timeOffsetMs = 0;
+  invalidateForTestChange();
+});
+document.getElementById('applyDayAndTime').addEventListener('click', ()=>{
+  prefillTestInputsIfEmpty();
+  const [hh,mm] = (testTimeInput.value||'09:30').split(':').map(Number);
+  const dow = parseInt(testDaySel.value,10);
+  const base = new Date();
+  const diff = (dow - base.getDay() + 7) % 7;
+  base.setDate(base.getDate()+diff);
+  base.setHours(hh, mm, 0, 0);
+  testState.mode = 'full';
+  testState.weekday = dow;
+  testState.timeOffsetMs = base.getTime() - Date.now();
+  invalidateForTestChange();
+});
+document.getElementById('resetRealTime').addEventListener('click', ()=>{
+  testState = { mode:'off', weekday:null, timeOffsetMs:0 };
+  invalidateForTestChange();
+});
+testBadge.addEventListener('click', ()=>{
+  testState = { mode:'off', weekday:null, timeOffsetMs:0 };
+  invalidateForTestChange();
+});
+document.getElementById('settingsBtn').addEventListener('click', prefillTestInputsIfEmpty);
+
+updateTestBadge();
+syncAllSettingsUI();
+</script>
+</body>
+</html>
